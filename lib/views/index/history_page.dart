@@ -54,9 +54,9 @@ class HistoryState extends State<HistoryPage> {
       final str = currentDate.toString().substring(0, 10).replaceFirst('-', ' 年 ').replaceFirst('-', ' 月 ') + ' 日';
       if (list.contains(currentDate.toString().substring(0, 10).replaceAll('-', '/'))) {
         lt = ListTile(leading: Icon(Icons.check_box), title: Text(str),);
-        if (currentDate == today) {
-          Global.checked = true;
-        }
+//        if (currentDate == today) {
+//          Global.checked = true;
+//        }
       } else {
         lt = ListTile(leading: Icon(Icons.check_box_outline_blank), title: Text(str),);
       }

@@ -15,6 +15,7 @@ class Global {
   static const accountTable = 'account';
   static const punchTable = 'punch';
   static const studentId = 'student_id';
+  static const account = 'account';
   static const password = 'password';
   static const atSchool = 'at_school';
   static const location = 'location';
@@ -22,6 +23,9 @@ class Global {
   static const health = 'health';
   static const temperature = 'temperature';
   static const extra = 'extra';
+  static const description = 'description';
+  static const accountData = 'account_data';
+  static const punchData = 'punch_data';
 
   static Future<Database> getDatabase() async {
     return openDatabase(

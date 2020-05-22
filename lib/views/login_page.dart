@@ -5,6 +5,7 @@ import 'package:punch_in/common/global.dart';
 import 'package:punch_in/common/http_request.dart';
 import 'package:punch_in/common/log.dart';
 import 'package:punch_in/model/account.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatelessWidget {
   final title;
@@ -43,11 +44,11 @@ class Login extends StatefulWidget {
 
 class LoginState extends State<Login> {
   final _loginFormKey = GlobalKey<FormState>();
-  String _studentId;
-  String _password;
+//  String _account;
+//  String _password;
   bool _isHidden = true;
 
-  final _studentIdController = TextEditingController();
+  final _accountController = TextEditingController();
   final _passwordController = TextEditingController();
 
   void _toggleVisibility () {
@@ -56,35 +57,46 @@ class LoginState extends State<Login> {
     });
   }
 
-  void loginForm() async {
-
-    _loginFormKey.currentState.save();
+  // Login
+  void login() async {
+//    _loginFormKey.currentState.save();
     if (_loginFormKey.currentState.validate()) {
-      final result = await login(_studentId, _password);
-      if (result) {
-        Navigator.pushReplacementNamed(context, "/home");
-      }
+//      final result = await loginLogic(_account, _password);
+//      final result = await loginLogic(_account, _password);
+//      if (result) {
+//        Navigator.pushReplacementNamed(context, "/home");
+//      }
+    if (await loginLogic(_accountController.text, _passwordController.text)) {
+      Navigator.pushReplacementNamed(context, "/home");
+    }
     }
   }
 
   @override
   void initState() {
     super.initState();
-    loadFormData();
+    autoLogin();
   }
 
-  void loadFormData() async {
-    final accounts = await Account.accounts();
-    if (accounts != null && accounts.length > 0) {
-      _studentIdController.text = accounts[0].studentId;
-      _passwordController.text = accounts[0].password;
-      if (await login(accounts[0].studentId, accounts[0].password)) {
-        Navigator.pushReplacementNamed(context, "/home");
+  // Auto login
+  void autoLogin() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString(Global.accountData) != null) {
+      _accountController.text = prefs.getString(Global.account);
+      _passwordController.text = prefs.getString(Global.password);
+      login();
+    } else {
+      final accounts = await Account.accounts();
+      if (accounts != null && accounts.length > 0) {
+        _accountController.text = accounts[0].studentId;
+        _passwordController.text = accounts[0].password;
+        login();
       }
     }
   }
 
-  Future<bool> login(String username, String password) async {
+  // Login process
+  Future<bool> loginLogic(String username, String password) async {
     Scaffold.of(context).showSnackBar(SnackBar(content: Text('登录中')));
     var flag = false;
     Response loginPageResponse = await HttpRequest.request('/login.aspx');
@@ -106,11 +118,16 @@ class LoginState extends State<Login> {
       final Response defaultPageResponse = await HttpRequest.request('/default.aspx');
       if (defaultPageResponse.statusCode == 200 && defaultPageResponse.data.indexOf(username) != -1) {
         Log.log('正在登录 成功', name: '登录');
-        await Account.insertAccount(Account(id: 1, studentId: username, password: password));
+        flag = true;
+
+        // Save form data
+        final prefs = await SharedPreferences.getInstance();
+        prefs.setString(Global.account, username);
+        prefs.setString(Global.password, password);
+        prefs.setString(Global.accountData, '');
         final document = parse(defaultPageResponse.data);
         var str = document.querySelector('.bdpink > a').attributes['href'];
         Global.key = str.substring(str.indexOf('=') + 1, str.indexOf('&'));
-        flag = true;
 
       } else {
         Log.log('正在登录 失败', name: '登录');
@@ -134,16 +151,16 @@ class LoginState extends State<Login> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             TextFormField(
-              controller: _studentIdController,
+              controller: _accountController,
               decoration: InputDecoration(
                 icon: Icon(Icons.account_circle),
                 labelText: "学号",
               ),
               maxLength: 10,
               keyboardType: TextInputType.number,
-              onSaved: (value) {
-                this._studentId = value;
-              },
+//              onSaved: (value) {
+//                this._account = value;
+//              },
               validator: (value) {
                 if (value.isEmpty) {
                   return "学号不能为空";
@@ -165,9 +182,9 @@ class LoginState extends State<Login> {
                   )
               ),
               maxLength: 20,
-              onSaved: (value) {
-                this._password = value;
-              },
+//              onSaved: (value) {
+//                this._password = value;
+//              },
               validator: (value) {
                 if (value.isEmpty) {
                   return "密码不能为空";
@@ -181,7 +198,7 @@ class LoginState extends State<Login> {
               child: RaisedButton(
                 color: Colors.blueAccent,
                 child: Text("登录", ),
-                onPressed: loginForm,
+                onPressed: login,
               ),
             )
           ],

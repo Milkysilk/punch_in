@@ -5,12 +5,12 @@ import 'package:punch_in/common/global.dart';
 import 'package:punch_in/common/http_request.dart';
 import 'package:punch_in/common/log.dart';
 import 'package:punch_in/model/punch.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class PunchPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-//      appBar: AppBar(title: Text("建议早起早睡，错峰打卡"),),
       body: Content(),
     );
   }
@@ -23,21 +23,18 @@ class Content extends StatefulWidget {
 
 class _ContentState extends State<Content> {
   final _punchInKey = GlobalKey<FormState>();
-  String _location = '';
-  String _temperature = '';
-  String _extra = '';
 
   final _locationController = TextEditingController();
   final _temperatureController = TextEditingController();
-  final _extraController = TextEditingController();
+  final _descriptionController = TextEditingController();
 
   List<String> _position = ['是', '否'];
   List<String> _observationStrings = ['无下列情况', '居家观察', '集中观察', '解除医学观察', '异常临床表现', '被列为疑似病例', '解除疑似病例', '是确诊病例', '确诊但已治愈'];
   List<String> _healthStrings = ['无不适', '发烧', '咳嗽', '气促', '乏力 / 肌肉酸痛', '其它症状'];
   Map<String, dynamic> _data = {
-    'atSchool': '',
-    'observation': '',
-    'health': Set<String>(),
+    Global.atSchool: '',
+    Global.observation: '',
+    Global.health: Set<String>(),
   };
   
   @override
@@ -47,28 +44,41 @@ class _ContentState extends State<Content> {
   }
 
   void loadFormData() async {
-    final punches = await Punch.punches();
-    if (punches != null && punches.length > 0) {
-      print(punches[0].temperature);
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString(Global.punchData) != null) {
       setState(() {
-        _data['atSchool'] = punches[0].atSchool;
-        _data['observation'] = punches[0].observation;
-        _data['health'] = Set.from(punches[0].health.split(','));
+        _data[Global.atSchool] = prefs.getString(Global.atSchool) ?? '';
+        _data[Global.observation] = prefs.getString(Global.observation) ?? '';
+        _data[Global.health] = prefs.getString(Global.health) != null ? Set.from(prefs.getString(Global.health).split(',')) : Set<String>();
       });
-      _locationController.text = punches[0].location;
-      _temperatureController.text = punches[0].temperature;
-      _extraController.text = punches[0].extra;
+      _locationController.text = prefs.getString(Global.location) ?? '';
+      _temperatureController.text = prefs.getString(Global.temperature) ?? '';
+      _descriptionController.text = prefs.getString(Global.extra) ?? '';
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('已自动填入上回数据，若情况有变切记修改'),));
+    } else {
+      final punches = await Punch.punches();
+      if (punches != null && punches.length > 0) {
+        setState(() {
+          _data[Global.atSchool] = punches[0].atSchool;
+          _data[Global.observation] = punches[0].observation;
+          _data[Global.health] = Set.from(punches[0].health.split(','));
+        });
+        _locationController.text = punches[0].location;
+        _temperatureController.text = punches[0].temperature;
+        _descriptionController.text = punches[0].extra;
+        Scaffold.of(context).showSnackBar(SnackBar(content: Text('已自动填入上回数据，若情况有变切记修改'),));
+      }
     }
   }
 
   void punchIn() async {
     if (Global.checked) {
-      Scaffold.of(context).showSnackBar(SnackBar(content: Text('今天打过了哦，你们不要再打了啦'),));
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('今天的卡已打，请明早再来'),));
       return;
     }
 
     if (DateTime.now().hour < 5 || DateTime.now().hour > 22) {
-      Scaffold.of(context).showSnackBar(SnackBar(content: Text('禁止 DDoS，请早睡早起打卡'),));
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('🙅🏻‍️🙅🏻禁止对服务器 DDoS，请早睡早起打卡'),));
       return;
     }
 
@@ -77,7 +87,6 @@ class _ContentState extends State<Content> {
       'fid': 20,
     };
 
-    _punchInKey.currentState.save();
     if (_punchInKey.currentState.validate() && _data['atSchool'] != '' && _data['observation'] != '' && _data['health'].length > 0) {
 
       final url = '/opt_rc_jkdk.aspx';
@@ -112,14 +121,14 @@ class _ContentState extends State<Content> {
             '__EVENTTARGET': '',
             '__EVENTARGUMENT': '',
             '__LASTFOCUS': '',
-            'ctl00\$cph_right\$e_atschool': _data['atSchool'],
-            'ctl00\$cph_right\$e_location': _location,
-            'ctl00\$cph_right\$e_observation': _data['observation'],
-            'ctl00\$cph_right\$e_temp': _temperature,
-            'ctl00\$cph_right\$e_describe': _extra,
+            'ctl00\$cph_right\$e_atschool': _data[Global.atSchool],
+            'ctl00\$cph_right\$e_location': _locationController.text,
+            'ctl00\$cph_right\$e_observation': _data[Global.observation],
+            'ctl00\$cph_right\$e_temp': _temperatureController.text,
+            'ctl00\$cph_right\$e_describe': _descriptionController.text,
             'ctl00\$cph_right\$e_submit': '提交保存'
           });
-          _data['health'].forEach((element) {
+          _data[Global.health].forEach((element) {
             punchData.addAll({'ctl00\$cph_right\$e_health\$${_healthStrings.indexOf(element)}': 'on'});
           });
 
@@ -130,28 +139,29 @@ class _ContentState extends State<Content> {
             Scaffold.of(context).showSnackBar(SnackBar(content: Text('打卡成功'),));
 
             // Save form data
-            await Punch.insertPunch(Punch(
-              id: 1,
-              atSchool: _data['atSchool'],
-              location: _location,
-              observation: _data['observation'],
-              health: _data['health'].join(','),
-              temperature: _temperature,
-              extra: _extra,
-            ));
+            final prefs = await SharedPreferences.getInstance();
+            <String, String>{
+              Global.atSchool: _data[Global.atSchool],
+              Global.atSchool: _data[Global.atSchool],
+              Global.location: _locationController.text,
+              Global.observation: _data[Global.observation],
+              Global.health: _data[Global.health].join(','),
+              Global.temperature: _temperatureController.text,
+              Global.extra: _descriptionController.text,
+            }.forEach((k, v) {
+              prefs.setString(k, v);
+            });
+            prefs.setString(Global.punchData, '');
 
-            // Clear
+            // Clear form
             setState(() {
-              _location = '';
-              _temperature = '';
-              _extra = '';
-              _data['atSchool'] = '';
-              _data['observation'] = '';
-              _data['health'].clear();
+              _data[Global.atSchool] = '';
+              _data[Global.observation] = '';
+              _data[Global.health].clear();
             });
             _locationController.text = '';
             _temperatureController.text = '';
-            _extraController.text = '';
+            _descriptionController.text = '';
 
           } else {
             Log.log('正在打卡 失败', name: '打卡');
@@ -184,7 +194,7 @@ class _ContentState extends State<Content> {
                   Wrap(
                     spacing: 5.0,
                     runSpacing: 3.0,
-                    children: getWidgets(strings: _position, type: 'atSchool'),
+                    children: getWidgets(strings: _position, type: Global.atSchool),
                   ),
                 ],
               ),
@@ -197,9 +207,6 @@ class _ContentState extends State<Content> {
                   labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
                   hintText: "__省__市__县（区）",
                 ),
-                onSaved: (value) {
-                  this._location = value;
-                },
                 validator: (value) {
                   if (value.isEmpty) {
                     return "不能为空";
@@ -217,7 +224,7 @@ class _ContentState extends State<Content> {
               Wrap(
                 spacing: 5.0,
                 runSpacing: 3.0,
-                children: getWidgets(strings: _observationStrings, type: 'observation'),
+                children: getWidgets(strings: _observationStrings, type: Global.observation),
               ),
               CustomDivider(),
 
@@ -231,7 +238,7 @@ class _ContentState extends State<Content> {
                 runSpacing: 3.0,
                 children: getWidgets(
                   strings: _healthStrings,
-                  type: "health",
+                  type: Global.health,
                   multiple: true,
                 ),
               ),
@@ -245,9 +252,6 @@ class _ContentState extends State<Content> {
                   hintText: "如果测量值为腋温，减 0.5 填报即可",
                 ),
                 keyboardType: TextInputType.number,
-                onSaved: (value) {
-                  this._temperature = value;
-                },
                 validator: (value) {
                   if (value.isEmpty) {
                     return "不能为空";
@@ -258,16 +262,13 @@ class _ContentState extends State<Content> {
 //              CustomDivider(),
 
               TextFormField(
-                controller: _extraController,
+                controller: _descriptionController,
                 maxLines: 3,
                 decoration: InputDecoration(
                   labelText: "症状、就诊及特殊情况说明",
                   labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
                   hintText: "“无不适”情况可留空，其它情况请详细说明",
                 ),
-                onSaved: (value) {
-                  this._extra = value;
-                },
               ),
 //              CustomDivider(),
 
@@ -313,16 +314,6 @@ class _ContentState extends State<Content> {
         onSelected: (bool selected) {
           setState(() {
             if (multiple) {
-//              if (selected) {
-//               if (strings[i] == '无不适') {
-//                 _data[type].clear();
-//               } else {
-//                 _data[type].remove('无不适');
-//               }
-//               _data[type].add(strings[i]);
-//              } else {
-//                _data[type].remove(strings[i]);
-//              }
               selected ? (() {
                 strings[i] == '无不适' ? _data[type].clear() : _data[type].remove('无不适');
                 _data[type].add(strings[i]);

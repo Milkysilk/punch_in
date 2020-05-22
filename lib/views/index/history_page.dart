@@ -1,10 +1,12 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart';
 import 'package:punch_in/common/global.dart';
 import 'package:punch_in/common/http_request.dart';
 import 'package:punch_in/common/log.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
+//import 'package:flutter/foundation.dart';
 
 class HistoryPage extends StatefulWidget {
 
@@ -54,9 +56,11 @@ class HistoryState extends State<HistoryPage> {
       final str = currentDate.toString().substring(0, 10).replaceFirst('-', ' 年 ').replaceFirst('-', ' 月 ') + ' 日';
       if (list.contains(currentDate.toString().substring(0, 10).replaceAll('-', '/'))) {
         lt = ListTile(leading: Icon(Icons.check_box), title: Text(str),);
-//        if (currentDate == today) {
-//          Global.checked = true;
-//        }
+        if (kReleaseMode) {
+          if (currentDate == today) {
+            Global.checked = true;
+          }
+        }
       } else {
         lt = ListTile(leading: Icon(Icons.check_box_outline_blank), title: Text(str),);
       }

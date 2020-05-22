@@ -75,6 +75,7 @@ class HistoryState extends State<HistoryPage> {
     return Scaffold(
       body: LiquidPullToRefresh(
         onRefresh: loadHistory,
+        animSpeedFactor: 2.0,
         child: ListView(
           children: getListWidgets(),
         ),

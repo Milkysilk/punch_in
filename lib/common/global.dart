@@ -1,4 +1,3 @@
-import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cookie_jar/cookie_jar.dart';
 
@@ -11,8 +10,6 @@ class Global {
   static String key;
   static String startDate = '2020-05-14';
 
-  static const accountTable = 'account';
-  static const punchTable = 'punch';
   static const studentId = 'student_id';
   static const account = 'account';
   static const password = 'password';

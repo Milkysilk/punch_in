@@ -97,7 +97,12 @@ class LoginState extends State<Login> {
         var attrs = input.attributes;
         data.addAll({attrs['id']: attrs['value']});
       }
-      data.addAll({'__EVENTTARGET': 'logon', '__EVENTARGUMENT': '', 'log_username': username, 'log_password': password});
+      data.addAll({
+        '__EVENTTARGET': 'logon',
+//        '__EVENTARGUMENT': '',
+        'log_username': username,
+        'log_password': password
+      });
 
       // Login
       await HttpRequest.request('/login.aspx', method: 'post', data: data, contentType: Headers.formUrlEncodedContentType);

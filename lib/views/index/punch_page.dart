@@ -26,16 +26,21 @@ class _ContentState extends State<Content> {
   final _locationController = TextEditingController();
   final _temperatureController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _dateController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _touchDescriptionController = TextEditingController();
 
-  List<String> _position = ['是', '否'];
-  List<String> _observationStrings = ['无下列情况', '居家观察', '集中观察', '解除医学观察', '异常临床表现', '被列为疑似病例', '解除疑似病例', '是确诊病例', '确诊但已治愈'];
-  List<String> _healthStrings = ['无不适', '发烧', '咳嗽', '气促', '乏力 / 肌肉酸痛', '其它症状'];
   Map<String, dynamic> _data = {
     Global.atSchool: '',
     Global.observation: '',
     Global.health: Set<String>(),
+    Global.study: '',
+    Global.history1: Set<String>(),
+    Global.history2: '',
   };
-  
+  bool _changed = false;
+
   @override
   void initState() {
     super.initState();
@@ -48,11 +53,26 @@ class _ContentState extends State<Content> {
       setState(() {
         _data[Global.atSchool] = prefs.getString(Global.atSchool) ?? '';
         _data[Global.observation] = prefs.getString(Global.observation) ?? '';
-        _data[Global.health] = prefs.getString(Global.health) != null ? Set.from(prefs.getString(Global.health).split(',')) : Set<String>();
+        _data[Global.health] = prefs.getString(Global.health) != null ?
+          Set.from(prefs.getString(Global.health).split(',')) : Set<String>();
+        _changed = prefs.getBool(Global.changed);
+        if (_changed) {
+          _data[Global.study] = prefs.getString(Global.study) ?? '';
+          _data[Global.history1] = prefs.getString(Global.history1) != null ?
+            Set.from(prefs.getString(Global.history1).split(',')) : Set<String>();
+          _data[Global.history2] = prefs.getString(Global.history2) ?? '';
+        }
       });
       _locationController.text = prefs.getString(Global.location) ?? '';
       _temperatureController.text = prefs.getString(Global.temperature) ?? '';
       _descriptionController.text = prefs.getString(Global.description) ?? '';
+      if (_changed) {
+        _addressController.text = prefs.getString(Global.address) ?? '';
+        _dateController.text = prefs.getString(Global.date) ?? '';
+        _cityController.text = prefs.getString(Global.city) ?? '';
+        _touchDescriptionController.text = prefs.getString(Global.touchDescription) ?? '';
+      }
+
       Scaffold.of(context).showSnackBar(SnackBar(content: Text('已自动填入上回数据，若情况有变切记修改'),));
     }
   }
@@ -68,73 +88,117 @@ class _ContentState extends State<Content> {
       return;
     }
 
+    // Validate
+    if (!_punchInKey.currentState.validate() || _data[Global.atSchool] == '' ||
+        _data[Global.observation] == '' || _data[Global.health].length == 0 ||
+        _changed && (_data[Global.study] == '' ||
+            _data[Global.history1].length == 0 ||
+            _data[Global.history2] == '')) {
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('有必填项未填写'),));
+      return;
+    }
+
     final params = {
       'key': Global.key,
       'fid': 20,
     };
 
-    if (_punchInKey.currentState.validate() && _data['atSchool'] != '' && _data['observation'] != '' && _data['health'].length > 0) {
+    final url = '/opt_rc_jkdk.aspx';
+    final Response reminderPageResponse = await HttpRequest.request(url, params: params);
+    if (reminderPageResponse.statusCode == 200 && reminderPageResponse.data.indexOf('重要提醒') != -1) {
+      Log.log('获取数据第一阶段 成功', name: '打卡');
+      final document1 = parse(reminderPageResponse.data);
+      final inputs1 = document1.querySelectorAll('input[type=hidden]');
+      var promiseData = Map<String, String>();
+      inputs1.forEach((input) {
+        final attrs = input.attributes;
+        promiseData.addAll({attrs['id']: attrs['value']});
+      });
+      promiseData.addAll({
+//        '__EVENTTARGET': '',
+//        '__EVENTARGUMENT': '',
+        'ctl00\$cph_right\$e_ok': 'on',
+        'ctl00\$cph_right\$ok_submit': '开始填报'
+      });
 
-      final url = '/opt_rc_jkdk.aspx';
-      final Response reminderPageResponse = await HttpRequest.request(url, params: params);
-      if (reminderPageResponse.statusCode == 200 && reminderPageResponse.data.indexOf('重要提醒') != -1) {
-        Log.log('获取数据第一阶段 成功', name: '打卡');
-        final document = parse(reminderPageResponse.data);
-        final inputs = document.querySelectorAll('input[type=hidden]');
-        var promiseData = Map<String, String>();
-        inputs.forEach((input) {
+      final Response punchPageResponse = await HttpRequest.request(url, params: params, method: 'post', data: promiseData, contentType: Headers.formUrlEncodedContentType);
+      if (punchPageResponse.statusCode == 200 && punchPageResponse.data.indexOf('提交保存') != -1) {
+        Log.log('获取数据第二阶段 成功', name: '打卡');
+        final document2 = parse(punchPageResponse.data);
+        final inputs2 = document2.querySelectorAll('input[type=hidden]');
+        var punchData = Map<String, String>();
+        inputs2.forEach((input) {
           final attrs = input.attributes;
-          promiseData.addAll({attrs['id']: attrs['value']});
+          punchData.addAll({attrs['id']: attrs['value']});
         });
-        promiseData.addAll({
-          '__EVENTTARGET': '',
-          '__EVENTARGUMENT': '',
-          'ctl00\$cph_right\$e_ok': 'on',
-          'ctl00\$cph_right\$ok_submit': '开始填报'
-        });
+        punchData.addAll({r'ctl00$cph_right$e_changed': 'on'});
 
-        final Response punchPageResponse = await HttpRequest.request(url, params: params, method: 'post', data: promiseData, contentType: Headers.formUrlEncodedContentType);
-        if (punchPageResponse.statusCode == 200 && punchPageResponse.data.indexOf('提交保存') != -1) {
-          Log.log('获取数据第二阶段 成功', name: '打卡');
-          final document = parse(punchPageResponse.data);
-          final inputs1 = document.querySelectorAll('input[type=hidden]');
-          var punchData = Map<String, String>();
-          inputs1.forEach((input) {
+        final Response detailPunchPageResponse = await HttpRequest.request(url, params: params, method: 'post', data: punchData, contentType: Headers.formUrlEncodedContentType);
+        if (detailPunchPageResponse.statusCode == 200 && detailPunchPageResponse.data.indexOf('学籍学业') != -1) {
+          Log.log('获取数据第三阶段 成功', name: '打卡');
+          final document3 = parse(detailPunchPageResponse.data);
+          final inputs3 = document3.querySelectorAll('input[type=hidden]');
+          var detailPunchData = Map<String, String>();
+          inputs3.forEach((input) {
             final attrs = input.attributes;
-            punchData.addAll({attrs['id']: attrs['value']});
+            detailPunchData.addAll({attrs['id']: attrs['value']});
           });
-          punchData.addAll({
-            '__EVENTTARGET': '',
-            '__EVENTARGUMENT': '',
-            '__LASTFOCUS': '',
-            'ctl00\$cph_right\$e_atschool': _data[Global.atSchool],
-            'ctl00\$cph_right\$e_location': _locationController.text,
-            'ctl00\$cph_right\$e_observation': _data[Global.observation],
-            'ctl00\$cph_right\$e_temp': _temperatureController.text,
-            'ctl00\$cph_right\$e_describe': _descriptionController.text,
-            'ctl00\$cph_right\$e_submit': '提交保存'
+          detailPunchData.addAll({
+            r'ctl00$cph_right$e_atschool': _data[Global.atSchool],
+            r'ctl00$cph_right$e_location': _locationController.text,
+            r'ctl00$cph_right$e_observation': _data[Global.observation],
+            r'ctl00$cph_right$e_temp': _temperatureController.text,
+            r'ctl00$cph_right$e_describe': _descriptionController.text,
+            r'ctl00$cph_right$e_submit': '提交保存'
           });
           _data[Global.health].forEach((element) {
-            punchData.addAll({'ctl00\$cph_right\$e_health\$${_healthStrings.indexOf(element)}': 'on'});
+            detailPunchData.addAll({'ctl00\$cph_right\$e_health\$${Global.healthStrings.indexOf(element)}': 'on'});
           });
+          if (_changed) {
+            detailPunchData.addAll({
+              r'ctl00$cph_right$e_xjzt': _data[Global.study],
+              r'ctl00$cph_right$e_gfczd': _addressController.text,
+              r'ctl00$cph_right$e_arvdate': _dateController.text,
+              r'ctl00$cph_right$e_city': _cityController.text,
+              r'ctl00$cph_right$e_touch': _data[Global.history2],
+              r'ctl00$cph_right$e_tchdescribe': _touchDescriptionController.text,
+            });
+            _data[Global.history1].forEach((element) {
+              detailPunchData.addAll({'ctl00\$cph_right\$e_history\$${Global.historyStrings1.indexOf(element)}': 'on'});
+            });
+          }
+          Log.log(detailPunchData.toString(), name: '打卡');
 
-          final Response punchPostResponse = await HttpRequest.request(url, params: params, method: 'post', data: punchData, contentType: Headers.formUrlEncodedContentType);
+          final Response punchPostResponse = await HttpRequest.request(url, params: params, method: 'post', data: detailPunchData, contentType: Headers.formUrlEncodedContentType);
           final position = punchPostResponse.data.indexOf('打卡成功');
+
           if (punchPostResponse.statusCode == 200 && position != -1) {
             Log.log('正在打卡 成功', name: '打卡');
             Scaffold.of(context).showSnackBar(SnackBar(content: Text('打卡成功'),));
 
             // Save form data
             final prefs = await SharedPreferences.getInstance();
-            <String, String>{
-              Global.atSchool: _data[Global.atSchool],
+            prefs.setBool(Global.changed, _changed);
+            Map<String, String> map = <String, String>{
               Global.atSchool: _data[Global.atSchool],
               Global.location: _locationController.text,
               Global.observation: _data[Global.observation],
               Global.health: _data[Global.health].join(','),
               Global.temperature: _temperatureController.text,
               Global.description: _descriptionController.text,
-            }.forEach((k, v) {
+            };
+            if (_changed) {
+              map.addAll({
+                Global.study: _data[Global.study],
+                Global.address: _addressController.text,
+                Global.date: _dateController.text,
+                Global.history1: _data[Global.history1].join(','),
+                Global.city: _cityController.text,
+                Global.history2: _data[Global.history2],
+                Global.touchDescription: _touchDescriptionController.text,
+              });
+            }
+            map.forEach((k, v) {
               prefs.setString(k, v);
             });
             prefs.setString(Global.punchData, '');
@@ -144,20 +208,29 @@ class _ContentState extends State<Content> {
               _data[Global.atSchool] = '';
               _data[Global.observation] = '';
               _data[Global.health].clear();
+              _data[Global.study] = '';
+              _data[Global.history1].clear();
+              _data[Global.history2] = '';
+
             });
             _locationController.text = '';
             _temperatureController.text = '';
             _descriptionController.text = '';
-
+            _addressController.text = '';
+            _dateController.text = '';
+            _cityController.text = '';
+            _touchDescriptionController.text = '';
           } else {
             Log.log('正在打卡 失败', name: '打卡');
           }
         } else {
-          Log.log('获取数据第二阶段 失败', name: '打卡');
+          Log.log('获取数据第三阶段 失败', name: '打卡');
         }
       } else {
-        Log.log('获取数据第一阶段 失败', name: '打卡');
+        Log.log('获取数据第二阶段 失败', name: '打卡');
       }
+    } else {
+      Log.log('获取数据第一阶段 失败', name: '打卡');
     }
   }
 
@@ -172,7 +245,7 @@ class _ContentState extends State<Content> {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  Text("当天是否在校", style: TextStyle(fontWeight: FontWeight.bold),),
+                  Text("当天是否在校 *", style: TextStyle(fontWeight: FontWeight.bold),),
                 ],
               ),
               Row(
@@ -180,7 +253,7 @@ class _ContentState extends State<Content> {
                   Wrap(
                     spacing: 5.0,
                     runSpacing: 3.0,
-                    children: getWidgets(strings: _position, type: Global.atSchool),
+                    children: getWidgets(strings: Global.atSchoolStrings, type: Global.atSchool),
                   ),
                 ],
               ),
@@ -189,7 +262,7 @@ class _ContentState extends State<Content> {
               TextFormField(
                 controller: _locationController,
                 decoration: InputDecoration(
-                  labelText: "当天所在地",
+                  labelText: "当天所在地 *",
                   labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
                   hintText: "__省__市__县（区）",
                 ),
@@ -200,30 +273,29 @@ class _ContentState extends State<Content> {
                   return null;
                 },
               ),
-//              CustomDivider(),
 
               Row(
                 children: <Widget>[
-                  Text("医学观察情况", style: TextStyle(fontWeight: FontWeight.bold),),
+                  Text("医学观察情况 *", style: TextStyle(fontWeight: FontWeight.bold),),
                 ],
               ),
               Wrap(
                 spacing: 5.0,
                 runSpacing: 3.0,
-                children: getWidgets(strings: _observationStrings, type: Global.observation),
+                children: getWidgets(strings: Global.observationStrings, type: Global.observation),
               ),
               CustomDivider(),
 
               Row(
                 children: <Widget>[
-                  Text("当天健康情况", style: TextStyle(fontWeight: FontWeight.bold),),
+                  Text("当天健康情况 *", style: TextStyle(fontWeight: FontWeight.bold),),
                 ],
               ),
               Wrap(
                 spacing: 5.0,
                 runSpacing: 3.0,
                 children: getWidgets(
-                  strings: _healthStrings,
+                  strings: Global.healthStrings,
                   type: Global.health,
                   multiple: true,
                 ),
@@ -233,7 +305,7 @@ class _ContentState extends State<Content> {
               TextFormField(
                 controller: _temperatureController,
                 decoration: InputDecoration(
-                  labelText: "当天实测额温",
+                  labelText: "当天实测额温 *",
                   labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
                   hintText: "如果测量值为腋温，减 0.5 填报即可",
                 ),
@@ -245,7 +317,6 @@ class _ContentState extends State<Content> {
                   return null;
                 },
               ),
-//              CustomDivider(),
 
               TextFormField(
                 controller: _descriptionController,
@@ -256,20 +327,25 @@ class _ContentState extends State<Content> {
                   hintText: "“无不适”情况可留空，其它情况请详细说明",
                 ),
               ),
-//              CustomDivider(),
 
-              Container(
-                child: Text(
-                  "// TODO（“旅居 / 接触史有否变化”有点长，有空再做；有变化的请上系统打）",
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold
-                  ),
-                ),
+              CheckboxListTile(
+                title: Text('旅居 / 接触史有否变化（beta）'),
+                subtitle: Text('有则勾选展开，无则不需理会'),
+                value: _changed,
+                onChanged: (bool value) {
+                  setState(() {
+                    _changed = value;
+                  });
+                },
               ),
               CustomDivider(),
 
+              Column(
+                children: detailWidgets(),
+              ),
+
               Container(
+                margin: EdgeInsets.only(top: 10.0),
                 width: double.infinity,
                 height: 44,
                 child: RaisedButton(
@@ -283,6 +359,91 @@ class _ContentState extends State<Content> {
         )
       ),
     ],);
+  }
+  
+  List<Widget> detailWidgets() {
+    var widgetList = List<Widget>();
+    if (_changed) {
+      widgetList.add(Row(children: <Widget>[
+        Text("学籍学业状态 *", style: TextStyle(fontWeight: FontWeight.bold),)
+      ],));
+      widgetList.add(Wrap(
+        spacing: 5.0,
+        runSpacing: 3.0,
+        children: getWidgets(strings: Global.studyStrings, type: Global.study),
+      ));
+      widgetList.add(CustomDivider());
+
+      widgetList.add(TextFormField(
+        controller: _addressController,
+        decoration: InputDecoration(
+          labelText: "穗（佛）常住地址 *",
+          labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          hintText: "__市__区及详细地址 / 无穗（佛）常住地请写“无”",
+        ),
+        validator: (value) {
+          if (_changed && value.isEmpty) {
+            return "不能为空";
+          }
+          return null;
+        },
+      ));
+
+      widgetList.add(TextFormField(
+        controller: _dateController,
+        decoration: InputDecoration(
+          labelText: "抵穗（佛）日期",
+          labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          hintText: "日期格式：2020/5/22，未返回者不填写",
+        ),
+      ));
+
+      widgetList.add(Row(children: <Widget>[
+        Text("一个月内旅 / 居史 *", style: TextStyle(fontWeight: FontWeight.bold),)
+      ],));
+      widgetList.add(Wrap(
+        spacing: 5.0,
+        runSpacing: 3.0,
+        children: getWidgets(strings: Global.historyStrings1, type: Global.history1, multiple: true),
+      ));
+      widgetList.add(CustomDivider());
+
+      widgetList.add(TextFormField(
+        controller: _cityController,
+        decoration: InputDecoration(
+          labelText: "一个月内旅 / 居城市 *",
+          labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          hintText: "__市__区__县（区），未外出即填写本地",
+        ),
+        validator: (value) {
+          if (_changed && value.isEmpty) {
+            return "不能为空";
+          }
+          return null;
+        },
+      ));
+
+      widgetList.add(Row(children: <Widget>[
+        Text("近期旅居 / 接触史 *", style: TextStyle(fontWeight: FontWeight.bold),)
+      ],));
+      widgetList.add(Wrap(
+        spacing: 5.0,
+        runSpacing: 3.0,
+        children: getWidgets(strings: Global.historyStrings2, type: Global.history2),
+      ));
+      widgetList.add(CustomDivider());
+
+      widgetList.add(TextFormField(
+        controller: _touchDescriptionController,
+        maxLines: 4,
+        decoration: InputDecoration(
+          labelText: "接触日期及具体情况",
+          labelStyle: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
+          hintText: "“无接触”情况可留空，其它情况请详细说明日期、车次航班、接触人员、具体情况",
+        ),
+      ),);
+    }
+    return widgetList;
   }
 
   List<Widget> getWidgets({

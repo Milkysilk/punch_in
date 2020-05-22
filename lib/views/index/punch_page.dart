@@ -167,7 +167,6 @@ class _ContentState extends State<Content> {
               detailPunchData.addAll({'ctl00\$cph_right\$e_history\$${Global.historyStrings1.indexOf(element)}': 'on'});
             });
           }
-          Log.log(detailPunchData.toString(), name: '打卡');
 
           final Response punchPostResponse = await HttpRequest.request(url, params: params, method: 'post', data: detailPunchData, contentType: Headers.formUrlEncodedContentType);
           final position = punchPostResponse.data.indexOf('打卡成功');

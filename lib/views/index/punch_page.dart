@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:html/parser.dart';
 import 'package:punch_in/common/global.dart';
@@ -83,9 +84,11 @@ class _ContentState extends State<Content> {
       return;
     }
 
-    if (DateTime.now().hour < 5 || DateTime.now().hour > 22) {
-      Scaffold.of(context).showSnackBar(SnackBar(content: Text('🙅🏻‍️🙅🏻禁止对服务器 DDoS，请早睡早起打卡'),));
-      return;
+    if (kReleaseMode) {
+      if (DateTime.now().hour < 5 || DateTime.now().hour > 22) {
+        Scaffold.of(context).showSnackBar(SnackBar(content: Text('禁止对服务器 DDoS，请早睡早起打卡'),));
+        return;
+      }
     }
 
     // Validate

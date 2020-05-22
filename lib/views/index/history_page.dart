@@ -6,7 +6,6 @@ import 'package:punch_in/common/global.dart';
 import 'package:punch_in/common/http_request.dart';
 import 'package:punch_in/common/log.dart';
 import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
-//import 'package:flutter/foundation.dart';
 
 class HistoryPage extends StatefulWidget {
 

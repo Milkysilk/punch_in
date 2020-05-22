@@ -52,7 +52,7 @@ class _ContentState extends State<Content> {
       });
       _locationController.text = prefs.getString(Global.location) ?? '';
       _temperatureController.text = prefs.getString(Global.temperature) ?? '';
-      _descriptionController.text = prefs.getString(Global.extra) ?? '';
+      _descriptionController.text = prefs.getString(Global.description) ?? '';
       Scaffold.of(context).showSnackBar(SnackBar(content: Text('已自动填入上回数据，若情况有变切记修改'),));
     }
   }
@@ -133,7 +133,7 @@ class _ContentState extends State<Content> {
               Global.observation: _data[Global.observation],
               Global.health: _data[Global.health].join(','),
               Global.temperature: _temperatureController.text,
-              Global.extra: _descriptionController.text,
+              Global.description: _descriptionController.text,
             }.forEach((k, v) {
               prefs.setString(k, v);
             });

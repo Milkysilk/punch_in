@@ -4,7 +4,6 @@ import 'package:html/parser.dart';
 import 'package:punch_in/common/global.dart';
 import 'package:punch_in/common/http_request.dart';
 import 'package:punch_in/common/log.dart';
-import 'package:punch_in/model/punch.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PunchPage extends StatelessWidget {
@@ -55,19 +54,6 @@ class _ContentState extends State<Content> {
       _temperatureController.text = prefs.getString(Global.temperature) ?? '';
       _descriptionController.text = prefs.getString(Global.extra) ?? '';
       Scaffold.of(context).showSnackBar(SnackBar(content: Text('已自动填入上回数据，若情况有变切记修改'),));
-    } else {
-      final punches = await Punch.punches();
-      if (punches != null && punches.length > 0) {
-        setState(() {
-          _data[Global.atSchool] = punches[0].atSchool;
-          _data[Global.observation] = punches[0].observation;
-          _data[Global.health] = Set.from(punches[0].health.split(','));
-        });
-        _locationController.text = punches[0].location;
-        _temperatureController.text = punches[0].temperature;
-        _descriptionController.text = punches[0].extra;
-        Scaffold.of(context).showSnackBar(SnackBar(content: Text('已自动填入上回数据，若情况有变切记修改'),));
-      }
     }
   }
 

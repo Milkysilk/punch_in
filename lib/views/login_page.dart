@@ -4,7 +4,6 @@ import 'package:html/parser.dart' show parse;
 import 'package:punch_in/common/global.dart';
 import 'package:punch_in/common/http_request.dart';
 import 'package:punch_in/common/log.dart';
-import 'package:punch_in/model/account.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatelessWidget {
@@ -59,16 +58,10 @@ class LoginState extends State<Login> {
 
   // Login
   void login() async {
-//    _loginFormKey.currentState.save();
     if (_loginFormKey.currentState.validate()) {
-//      final result = await loginLogic(_account, _password);
-//      final result = await loginLogic(_account, _password);
-//      if (result) {
-//        Navigator.pushReplacementNamed(context, "/home");
-//      }
-    if (await loginLogic(_accountController.text, _passwordController.text)) {
-      Navigator.pushReplacementNamed(context, "/home");
-    }
+      if (await loginLogic(_accountController.text, _passwordController.text)) {
+        Navigator.pushReplacementNamed(context, "/home");
+      }
     }
   }
 
@@ -85,13 +78,6 @@ class LoginState extends State<Login> {
       _accountController.text = prefs.getString(Global.account);
       _passwordController.text = prefs.getString(Global.password);
       login();
-    } else {
-      final accounts = await Account.accounts();
-      if (accounts != null && accounts.length > 0) {
-        _accountController.text = accounts[0].studentId;
-        _passwordController.text = accounts[0].password;
-        login();
-      }
     }
   }
 

@@ -27,6 +27,7 @@ class HistoryState extends State<HistoryPage> {
       'fid': '20',
     });
     if (response != null && response.statusCode == 200 && response.data.toString().indexOf('最近健康打卡记录') != -1) {
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('历史记录刷新完成'),));
       Log.log('正在获取历史记录 成功', name: '历史');
       final document = parse(response.data);
       final trs = document.querySelectorAll('tr[class="tr0"], tr[class="tr1"]');

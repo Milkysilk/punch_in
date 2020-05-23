@@ -21,13 +21,15 @@ class HistoryState extends State<HistoryPage> {
     loadHistory();
   }
 
-  Future<void> loadHistory() async {
+  Future<void> loadHistory({bool ifPrompt = false}) async {
     final Response response = await HttpRequest.request('/opt_rc_jkdkcx.aspx', params: {
       'key': Global.key,
       'fid': '20',
     });
     if (response != null && response.statusCode == 200 && response.data.toString().indexOf('最近健康打卡记录') != -1) {
-      Scaffold.of(context).showSnackBar(SnackBar(content: Text('历史记录刷新完成'),));
+      if (ifPrompt) {
+        Scaffold.of(context).showSnackBar(SnackBar(content: Text('刷新完成'),));
+      }
       Log.log('正在获取历史记录 成功', name: '历史');
       final document = parse(response.data);
       final trs = document.querySelectorAll('tr[class="tr0"], tr[class="tr1"]');
@@ -42,7 +44,7 @@ class HistoryState extends State<HistoryPage> {
         this.list = list;
       });
     } else {
-      Scaffold.of(context).showSnackBar(SnackBar(content: Text('历史记录获取失败，请稍后重试'),));
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('刷新失败，请稍后重试'),));
       Log.log('正在获取历史记录 失败', name: '历史');
     }
   }
@@ -76,7 +78,7 @@ class HistoryState extends State<HistoryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: RefreshIndicator(
-        onRefresh: loadHistory,
+        onRefresh: () => loadHistory(ifPrompt: true),
         child: ListView(
           children: getListWidgets(),
         ),
@@ -84,3 +86,5 @@ class HistoryState extends State<HistoryPage> {
     );
   }
 }
+
+typedef VoidCallback = Function(bool flag);

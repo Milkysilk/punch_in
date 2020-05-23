@@ -1,16 +1,5 @@
 # punch_in
 
-A new Flutter project.
+## 重要提醒
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+**如果对此 App 不放心，可以先上系统修改密码，推荐使用浏览器和其它密码管理器生成随机密码**

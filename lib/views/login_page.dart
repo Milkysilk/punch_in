@@ -59,31 +59,35 @@ class LoginState extends State<Login> {
   void login() async {
     if (_loginFormKey.currentState.validate()) {
       if (await loginLogic(_accountController.text, _passwordController.text)) {
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('提醒'),
-              content: SingleChildScrollView(
-                child: ListBody(
-                  children: <Widget>[
-                    Text('晚上打卡会造成交通拥堵'),
-                    Text('建议早睡早起健康打卡'),
-                  ],
+        if (DateTime.now().hour < 5 || DateTime.now().hour > 22) {
+          showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: Text('提醒'),
+                content: SingleChildScrollView(
+                  child: ListBody(
+                    children: <Widget>[
+                      Text('晚上打卡会造成交通拥堵'),
+                      Text('建议早睡早起健康打卡'),
+                    ],
+                  ),
                 ),
-              ),
-              actions: <Widget>[
-                FlatButton(
-                  child: Text('好的'),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    Navigator.pushReplacementNamed(context, "/home");
-                  },
-                )
-              ],
-            );
-          }
-        );
+                actions: <Widget>[
+                  FlatButton(
+                    child: Text('好的'),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      Navigator.pushReplacementNamed(context, "/home");
+                    },
+                  )
+                ],
+              );
+            }
+          );
+        } else {
+          Navigator.pushReplacementNamed(context, "/home");
+        }
       }
     }
   }

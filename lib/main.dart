@@ -13,8 +13,6 @@ class App extends StatelessWidget {
       title: "打我的卡",
       theme: ThemeData(
         primaryColor: Colors.blueAccent,
-//        highlightColor: Colors.transparent,
-//        splashColor: Colors.transparent,
       ),
       routes: {
         "/": (context) => LoginPage(title: "登录",),

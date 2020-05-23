@@ -41,6 +41,7 @@ class _ContentState extends State<Content> {
     Global.history2: '',
   };
   bool _changed = false;
+  bool _loading = false;
 
   @override
   void initState() {
@@ -74,7 +75,30 @@ class _ContentState extends State<Content> {
         _touchDescriptionController.text = prefs.getString(Global.touchDescription) ?? '';
       }
 
-      Scaffold.of(context).showSnackBar(SnackBar(content: Text('已自动填入上回数据，若情况有变切记修改'),));
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('提醒'),
+            content: SingleChildScrollView(
+              child: ListBody(
+                children: <Widget>[
+                  Text('已自动填入上回数据'),
+                  Text('若有变化请修改'),
+                ],
+              ),
+            ),
+            actions: <Widget>[
+              FlatButton(
+                child: Text('好的'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              )
+            ],
+          );
+        }
+      );
     }
   }
 
@@ -82,13 +106,6 @@ class _ContentState extends State<Content> {
     if (Global.checked) {
       Scaffold.of(context).showSnackBar(SnackBar(content: Text('今天的卡已打，请明早再来'),));
       return;
-    }
-
-    if (kReleaseMode) {
-      if (DateTime.now().hour < 5 || DateTime.now().hour > 22) {
-        Scaffold.of(context).showSnackBar(SnackBar(content: Text('禁止对服务器 DDoS，请早睡早起打卡'),));
-        return;
-      }
     }
 
     // Validate
@@ -100,6 +117,11 @@ class _ContentState extends State<Content> {
       Scaffold.of(context).showSnackBar(SnackBar(content: Text('有必填项未填写'),));
       return;
     }
+
+    bool _flag = false;
+    setState(() {
+      _loading = true;
+    });
 
     final params = {
       'key': Global.key,
@@ -124,8 +146,11 @@ class _ContentState extends State<Content> {
         'ctl00\$cph_right\$ok_submit': '开始填报'
       });
 
-      final Response punchPageResponse = await HttpRequest.request(url, params: params, method: 'post', data: promiseData, contentType: Headers.formUrlEncodedContentType);
-      if (punchPageResponse.statusCode == 200 && punchPageResponse.data.indexOf('提交保存') != -1) {
+      final Response punchPageResponse = await HttpRequest.request(url,
+          params: params, method: 'post', data: promiseData,
+          contentType: Headers.formUrlEncodedContentType);
+      if (punchPageResponse.statusCode == 200 &&
+          punchPageResponse.data.indexOf('提交保存') != -1) {
         Log.log('获取数据第二阶段 成功', name: '打卡');
         final document2 = parse(punchPageResponse.data);
         final inputs2 = document2.querySelectorAll('input[type=hidden]');
@@ -136,8 +161,11 @@ class _ContentState extends State<Content> {
         });
         punchData.addAll({r'ctl00$cph_right$e_changed': 'on'});
 
-        final Response detailPunchPageResponse = await HttpRequest.request(url, params: params, method: 'post', data: punchData, contentType: Headers.formUrlEncodedContentType);
-        if (detailPunchPageResponse.statusCode == 200 && detailPunchPageResponse.data.indexOf('学籍学业') != -1) {
+        final Response detailPunchPageResponse = await HttpRequest.request(url,
+            params: params, method: 'post', data: punchData,
+            contentType: Headers.formUrlEncodedContentType);
+        if (detailPunchPageResponse.statusCode == 200 &&
+            detailPunchPageResponse.data.indexOf('学籍学业') != -1) {
           Log.log('获取数据第三阶段 成功', name: '打卡');
           final document3 = parse(detailPunchPageResponse.data);
           final inputs3 = document3.querySelectorAll('input[type=hidden]');
@@ -159,6 +187,7 @@ class _ContentState extends State<Content> {
           });
           if (_changed) {
             detailPunchData.addAll({
+              r'ctl00$cph_right$e_changed': 'on',
               r'ctl00$cph_right$e_xjzt': _data[Global.study],
               r'ctl00$cph_right$e_gfczd': _addressController.text,
               r'ctl00$cph_right$e_arvdate': _dateController.text,
@@ -171,10 +200,14 @@ class _ContentState extends State<Content> {
             });
           }
 
-          final Response punchPostResponse = await HttpRequest.request(url, params: params, method: 'post', data: detailPunchData, contentType: Headers.formUrlEncodedContentType);
+          final Response punchPostResponse = await HttpRequest.request(url,
+              params: params, method: 'post', data: detailPunchData,
+              contentType: Headers.formUrlEncodedContentType);
           final position = punchPostResponse.data.indexOf('打卡成功');
 
           if (punchPostResponse.statusCode == 200 && position != -1) {
+            _flag = true;
+            Global.checked = true;
             Log.log('正在打卡 成功', name: '打卡');
             Scaffold.of(context).showSnackBar(SnackBar(content: Text('打卡成功'),));
 
@@ -234,6 +267,12 @@ class _ContentState extends State<Content> {
     } else {
       Log.log('获取数据第一阶段 失败', name: '打卡');
     }
+    setState(() {
+      _loading = false;
+    });
+    if (!_flag) {
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('打卡失败，请稍后重试'),));
+    }
   }
 
   @override
@@ -262,6 +301,7 @@ class _ContentState extends State<Content> {
               CustomDivider(),
 
               TextFormField(
+                enabled: !_loading,
                 controller: _locationController,
                 decoration: InputDecoration(
                   labelText: "当天所在地 *",
@@ -305,6 +345,7 @@ class _ContentState extends State<Content> {
               CustomDivider(),
 
               TextFormField(
+                enabled: !_loading,
                 controller: _temperatureController,
                 decoration: InputDecoration(
                   labelText: "当天实测额温 *",
@@ -321,6 +362,7 @@ class _ContentState extends State<Content> {
               ),
 
               TextFormField(
+                enabled: !_loading,
                 controller: _descriptionController,
                 maxLines: 3,
                 decoration: InputDecoration(
@@ -331,10 +373,36 @@ class _ContentState extends State<Content> {
               ),
 
               CheckboxListTile(
-                title: Text('旅居 / 接触史有否变化（beta）'),
+                title: Text('旅居 / 接触史有否变化'),
                 subtitle: Text('有则勾选展开，无则不需理会'),
                 value: _changed,
-                onChanged: (bool value) {
+                onChanged: _loading ? null : (bool value) {
+                  if (value) {
+                    showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        title: Text('提醒'),
+                        content: SingleChildScrollView(
+                          child: ListBody(
+                            children: <Widget>[
+                              Text('此部分未进行测试（毕竟不能乱填），请知悉'),
+                              Text('若用时遇到 bug 请联系开发者，谢谢'),
+                            ],
+                          ),
+                        ),
+                        actions: <Widget>[
+                          FlatButton(
+                            child: Text('好的'),
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                          )
+                        ],
+                      );
+                    }
+                  );
+                  }
                   setState(() {
                     _changed = value;
                   });
@@ -351,9 +419,12 @@ class _ContentState extends State<Content> {
                 width: double.infinity,
                 height: 44,
                 child: RaisedButton(
-                  child: Text('提交'),
+                  child: _loading ?
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation(Colors.blueAccent),
+                      ): Text('提交'),
                   color: Colors.blueAccent,
-                  onPressed: punchIn,
+                  onPressed: _loading ? null : punchIn,
                 ),
               )
             ],
@@ -377,6 +448,7 @@ class _ContentState extends State<Content> {
       widgetList.add(CustomDivider());
 
       widgetList.add(TextFormField(
+        enabled: !_loading,
         controller: _addressController,
         decoration: InputDecoration(
           labelText: "穗（佛）常住地址 *",
@@ -392,6 +464,7 @@ class _ContentState extends State<Content> {
       ));
 
       widgetList.add(TextFormField(
+        enabled: !_loading,
         controller: _dateController,
         decoration: InputDecoration(
           labelText: "抵穗（佛）日期",
@@ -411,6 +484,7 @@ class _ContentState extends State<Content> {
       widgetList.add(CustomDivider());
 
       widgetList.add(TextFormField(
+        enabled: !_loading,
         controller: _cityController,
         decoration: InputDecoration(
           labelText: "一个月内旅 / 居城市 *",
@@ -436,6 +510,7 @@ class _ContentState extends State<Content> {
       widgetList.add(CustomDivider());
 
       widgetList.add(TextFormField(
+        enabled: !_loading,
         controller: _touchDescriptionController,
         maxLines: 4,
         decoration: InputDecoration(
@@ -460,7 +535,7 @@ class _ContentState extends State<Content> {
         selected: multiple ? _data[type].contains(strings[i]) : _data[type] == strings[i],
         selectedColor: Color(0xffeadffd),
         backgroundColor: Color(0xffededed),
-        onSelected: (bool selected) {
+        onSelected: _loading ? null : (bool selected) {
           setState(() {
             if (multiple) {
               selected ? (() {

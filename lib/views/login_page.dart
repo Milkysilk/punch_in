@@ -59,7 +59,7 @@ class LoginState extends State<Login> {
   void login() async {
     if (_loginFormKey.currentState.validate()) {
       if (await loginLogic(_accountController.text, _passwordController.text)) {
-        if (DateTime.now().hour < 5 || DateTime.now().hour > 22) {
+        if (DateTime.now().hour < 5 || DateTime.now().hour > 21) {
           showDialog(
             context: context,
             builder: (BuildContext context) {

@@ -4,7 +4,7 @@ import 'package:cookie_jar/cookie_jar.dart';
 class Global {
   static bool checked = false;
   static const baseUrl = 'http://eswis.gdpu.edu.cn';
-  static const timeout = 5000;
+  static const timeout = 15000;
   static CookieJar cookieJar = CookieJar();
   static String key;
   static String startDate = '2020-05-14';
@@ -42,6 +42,8 @@ class Global {
   static const List<String> historyStrings2 = ['无接触', '本人目前在【湖北】',
     '本人目前在【温州】', '本人 14 天内从【湖北 / 温州】返粤',
     '14 日内密切接触近期有【湖北 / 温州】旅居史者', '自我感觉 14 日内【曾与】患者接触'];
+
+  static const qq = '171690393';
 
   static Future<String> get localPath async {
     final directory = await getApplicationDocumentsDirectory();

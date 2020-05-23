@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:punch_in/common/global.dart';
+import 'package:punch_in/common/log.dart';
 
 
 class HttpRequest {
@@ -28,11 +29,17 @@ class HttpRequest {
         return statusCode < 500;
       }
     );
+    CancelToken token = CancelToken();
     try {
-      final response = await dio.request(url, queryParameters: params, data: data, options: options);
+      print(url);
+      final response = await dio.request(url, queryParameters: params, data: data, options: options, cancelToken: token);
       return response;
     } on DioError catch(err) {
-        throw err;
+      if (err.type == DioErrorType.CONNECT_TIMEOUT) {
+        Log.log('请求超时', name: '网络');
+        token.cancel('cancelled');
+      }
+//      throw err;
     }
   }
 }

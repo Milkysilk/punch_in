@@ -43,9 +43,8 @@ class Login extends StatefulWidget {
 
 class LoginState extends State<Login> {
   final _loginFormKey = GlobalKey<FormState>();
-//  String _account;
-//  String _password;
   bool _isHidden = true;
+  bool _loading = false;
 
   final _accountController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -60,15 +59,39 @@ class LoginState extends State<Login> {
   void login() async {
     if (_loginFormKey.currentState.validate()) {
       if (await loginLogic(_accountController.text, _passwordController.text)) {
-        Navigator.pushReplacementNamed(context, "/home");
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: Text('提醒'),
+              content: SingleChildScrollView(
+                child: ListBody(
+                  children: <Widget>[
+                    Text('晚上打卡会造成交通拥堵'),
+                    Text('建议早睡早起健康打卡'),
+                  ],
+                ),
+              ),
+              actions: <Widget>[
+                FlatButton(
+                  child: Text('好的'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    Navigator.pushReplacementNamed(context, "/home");
+                  },
+                )
+              ],
+            );
+          }
+        );
       }
     }
   }
 
   @override
   void initState() {
-    super.initState();
     autoLogin();
+    super.initState();
   }
 
   // Auto login
@@ -83,10 +106,12 @@ class LoginState extends State<Login> {
 
   // Login process
   Future<bool> loginLogic(String username, String password) async {
-    Scaffold.of(context).showSnackBar(SnackBar(content: Text('登录中')));
+    setState(() {
+      _loading = true;
+    });
     var flag = false;
     Response loginPageResponse = await HttpRequest.request('/login.aspx');
-    if (loginPageResponse.statusCode == 200) {
+    if (loginPageResponse != null && loginPageResponse.statusCode == 200) {
       Log.log('正在获取数据 成功', name: '登录');
 
       // Get data
@@ -107,7 +132,7 @@ class LoginState extends State<Login> {
       // Login
       await HttpRequest.request('/login.aspx', method: 'post', data: data, contentType: Headers.formUrlEncodedContentType);
       final Response defaultPageResponse = await HttpRequest.request('/default.aspx');
-      if (defaultPageResponse.statusCode == 200 && defaultPageResponse.data.indexOf(username) != -1) {
+      if (defaultPageResponse != null && defaultPageResponse.statusCode == 200 && defaultPageResponse.data.indexOf(username) != -1) {
         Log.log('正在登录 成功', name: '登录');
         flag = true;
 
@@ -127,8 +152,11 @@ class LoginState extends State<Login> {
       Log.log('正在获取数据 失败', name: '登录');
     }
     if (!flag) {
-      Scaffold.of(context).showSnackBar(SnackBar(content: Text('登录失败')));
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('登录失败，请稍候重试')));
     }
+    setState(() {
+      _loading = false;
+    });
     return flag;
   }
 
@@ -142,6 +170,7 @@ class LoginState extends State<Login> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             TextFormField(
+              enabled: !_loading,
               controller: _accountController,
               decoration: InputDecoration(
                 icon: Icon(Icons.account_circle),
@@ -149,9 +178,6 @@ class LoginState extends State<Login> {
               ),
               maxLength: 10,
               keyboardType: TextInputType.number,
-//              onSaved: (value) {
-//                this._account = value;
-//              },
               validator: (value) {
                 if (value.isEmpty) {
                   return "学号不能为空";
@@ -162,6 +188,7 @@ class LoginState extends State<Login> {
               },
             ),
             TextFormField(
+              enabled: !_loading,
               controller: _passwordController,
               obscureText: _isHidden,
               decoration: InputDecoration(
@@ -173,9 +200,6 @@ class LoginState extends State<Login> {
                   )
               ),
               maxLength: 20,
-//              onSaved: (value) {
-//                this._password = value;
-//              },
               validator: (value) {
                 if (value.isEmpty) {
                   return "密码不能为空";
@@ -188,8 +212,10 @@ class LoginState extends State<Login> {
               height: 44,
               child: RaisedButton(
                 color: Colors.blueAccent,
-                child: Text("登录", ),
-                onPressed: login,
+                child: _loading ? CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation(Colors.blueAccent),
+                ) : Text("登录", ),
+                onPressed: _loading ? null : login,
               ),
             )
           ],

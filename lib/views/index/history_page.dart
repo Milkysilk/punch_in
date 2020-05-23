@@ -5,7 +5,6 @@ import 'package:html/parser.dart';
 import 'package:punch_in/common/global.dart';
 import 'package:punch_in/common/http_request.dart';
 import 'package:punch_in/common/log.dart';
-import 'package:liquid_pull_to_refresh/liquid_pull_to_refresh.dart';
 
 class HistoryPage extends StatefulWidget {
 
@@ -27,7 +26,7 @@ class HistoryState extends State<HistoryPage> {
       'key': Global.key,
       'fid': '20',
     });
-    if (response.statusCode == 200 && response.data.toString().indexOf('最近健康打卡记录') != -1) {
+    if (response != null && response.statusCode == 200 && response.data.toString().indexOf('最近健康打卡记录') != -1) {
       Log.log('正在获取历史记录 成功', name: '历史');
       final document = parse(response.data);
       final trs = document.querySelectorAll('tr[class="tr0"], tr[class="tr1"]');
@@ -41,6 +40,9 @@ class HistoryState extends State<HistoryPage> {
       setState(() {
         this.list = list;
       });
+    } else {
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('历史记录获取失败，请稍后重试'),));
+      Log.log('正在获取历史记录 失败', name: '历史');
     }
   }
 
@@ -72,9 +74,8 @@ class HistoryState extends State<HistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: LiquidPullToRefresh(
+      body: RefreshIndicator(
         onRefresh: loadHistory,
-        animSpeedFactor: 2.0,
         child: ListView(
           children: getListWidgets(),
         ),

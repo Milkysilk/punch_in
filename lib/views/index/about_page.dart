@@ -1,4 +1,7 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:punch_in/common/global.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AboutPage extends StatelessWidget {
   @override
@@ -8,7 +11,6 @@ class AboutPage extends StatelessWidget {
     );
   }
 }
-
 
 class Content extends StatelessWidget {
   @override
@@ -22,11 +24,22 @@ class Content extends StatelessWidget {
         ),
         ListTile(
           leading: Icon(Icons.bug_report),
-          title: Text('联系 || 虫子反馈'),
-          subtitle: Text('为什么不问问神奇海螺呢'),
+          title: Text('联系 && 反馈'),
+          subtitle: Text('QQ'),
+          onTap: () async {
+            String url = '';
+            if (Platform.isAndroid) {
+              url = 'mqqwpa://im/chat?chat_type=wpa&uin=${Global.qq}';
+            }
+
+            if (await canLaunch(url)) {
+              await launch(url);
+            } else {
+              Scaffold.of(context).showSnackBar(SnackBar(content: Text('无法启动 QQ'),));
+            }
+          },
         )
       ],
     );
   }
 }
-

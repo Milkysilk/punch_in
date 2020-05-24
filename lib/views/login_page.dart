@@ -68,7 +68,7 @@ class LoginState extends State<Login> {
                 content: SingleChildScrollView(
                   child: ListBody(
                     children: <Widget>[
-                      Text('晚上打卡会造成交通拥堵'),
+                      Text('半夜打卡（可能）会造成服务器超载'),
                       Text('建议早睡早起健康打卡'),
                     ],
                   ),

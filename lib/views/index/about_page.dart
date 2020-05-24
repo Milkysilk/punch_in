@@ -25,7 +25,7 @@ class Content extends StatelessWidget {
         ListTile(
           leading: Icon(Icons.bug_report),
           title: Text('联系 && 反馈', style: TextStyle(color: Colors.blue),),
-          subtitle: Text('QQ', style: TextStyle(color: Colors.blue),),
+          subtitle: Text('点我', style: TextStyle(color: Colors.blue),),
           onTap: () async {
             String url = '';
             if (Platform.isAndroid) {

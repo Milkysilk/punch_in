@@ -130,7 +130,9 @@ class _ContentState extends State<Content> {
 
     final url = '/opt_rc_jkdk.aspx';
     final Response reminderPageResponse = await HttpRequest.request(url, params: params);
-    if (reminderPageResponse.statusCode == 200 && reminderPageResponse.data.indexOf('重要提醒') != -1) {
+    if (reminderPageResponse != null &&
+        reminderPageResponse.statusCode == 200 &&
+        reminderPageResponse.data.indexOf('重要提醒') != -1) {
       Log.log('获取数据第一阶段 成功', name: '打卡');
       final document1 = parse(reminderPageResponse.data);
       final inputs1 = document1.querySelectorAll('input[type=hidden]');
@@ -149,7 +151,8 @@ class _ContentState extends State<Content> {
       final Response punchPageResponse = await HttpRequest.request(url,
           params: params, method: 'post', data: promiseData,
           contentType: Headers.formUrlEncodedContentType);
-      if (punchPageResponse.statusCode == 200 &&
+      if (punchPageResponse != null &&
+          punchPageResponse.statusCode == 200 &&
           punchPageResponse.data.indexOf('提交保存') != -1) {
         Log.log('获取数据第二阶段 成功', name: '打卡');
         final document2 = parse(punchPageResponse.data);
@@ -164,7 +167,8 @@ class _ContentState extends State<Content> {
         final Response detailPunchPageResponse = await HttpRequest.request(url,
             params: params, method: 'post', data: punchData,
             contentType: Headers.formUrlEncodedContentType);
-        if (detailPunchPageResponse.statusCode == 200 &&
+        if (detailPunchPageResponse != null &&
+            detailPunchPageResponse.statusCode == 200 &&
             detailPunchPageResponse.data.indexOf('学籍学业') != -1) {
           Log.log('获取数据第三阶段 成功', name: '打卡');
           final document3 = parse(detailPunchPageResponse.data);
@@ -205,7 +209,9 @@ class _ContentState extends State<Content> {
               contentType: Headers.formUrlEncodedContentType);
           final position = punchPostResponse.data.indexOf('打卡成功');
 
-          if (punchPostResponse.statusCode == 200 && position != -1) {
+          if (punchPostResponse != null &&
+              punchPostResponse.statusCode == 200 &&
+              position != -1) {
             _flag = true;
             Global.checked = true;
             Log.log('正在打卡 成功', name: '打卡');

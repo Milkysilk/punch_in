@@ -23,9 +23,25 @@ class Content extends StatelessWidget {
           subtitle: Text('外包 16 的'),
         ),
         ListTile(
+          leading: Icon(Icons.event_note),
+          title: Text('更新日志'),
+          subtitle: Text('CHANGES'),
+          onTap: () {
+            Navigator.pushNamed(context, '/log');
+          },
+        ),
+        ListTile(
+          leading: Icon(Icons.question_answer),
+          title: Text('常见问题'),
+          subtitle: Text('FAQ'),
+          onTap: () {
+            Navigator.pushNamed(context, '/faq');
+          },
+        ),
+        ListTile(
           leading: Icon(Icons.bug_report),
           title: Text('联系 && 反馈', style: TextStyle(color: Colors.blue),),
-          subtitle: Text('点我', style: TextStyle(color: Colors.blue),),
+          subtitle: Text('打开 QQ', style: TextStyle(color: Colors.blue),),
           onTap: () async {
             String url = '';
             if (Platform.isAndroid) {

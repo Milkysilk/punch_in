@@ -44,7 +44,7 @@ class HistoryState extends State<HistoryPage> {
         this.list = list;
       });
     } else {
-      Scaffold.of(context).showSnackBar(SnackBar(content: Text('刷新失败，请稍后重试'),));
+      Scaffold.of(context).showSnackBar(SnackBar(content: Text('刷新历史失败，请稍后重试'),));
       Log.log('正在获取历史记录 失败', name: '历史');
     }
   }

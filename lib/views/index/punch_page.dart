@@ -5,6 +5,7 @@ import 'package:html/parser.dart';
 import 'package:punch_in/common/global.dart';
 import 'package:punch_in/common/http_request.dart';
 import 'package:punch_in/common/log.dart';
+import 'package:punch_in/widget/custom_divider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class PunchPage extends StatelessWidget {
@@ -561,13 +562,3 @@ class _ContentState extends State<Content> {
   }
 }
 
-class CustomDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Divider(
-      height: 15.0,
-      thickness: 1.0,
-      color: Colors.blueGrey,
-    );
-  }
-}
